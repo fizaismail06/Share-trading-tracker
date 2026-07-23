@@ -5,9 +5,10 @@ import { db, auth } from "./lib/firebase";
 import InputForm from "./components/InputForm";
 import TransactionHistory from "./components/TransactionHistory";
 import Summary from "./components/Summary";
+import Insight from "./components/Insight";
 import Login from "./components/Login";
 
-const TABS = ["Input Form", "Transaction History", "Summary"];
+const TABS = ["Input Form", "Transaction History", "Summary", "Insight"];
 
 export default function App() {
   const [tab, setTab] = useState("Input Form");
@@ -88,6 +89,7 @@ export default function App() {
         {tab === "Input Form" && <InputForm />}
         {tab === "Transaction History" && <TransactionHistory transactions={transactions} />}
         {tab === "Summary" && <Summary transactions={transactions} currentPrices={currentPrices} />}
+        {tab === "Insight" && <Insight transactions={transactions} currentPrices={currentPrices} />}
       </main>
     </div>
   );

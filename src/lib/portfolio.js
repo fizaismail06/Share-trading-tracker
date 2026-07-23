@@ -94,3 +94,54 @@ export function buildSummary(transactions, currentPrices = {}) {
 
   return { cash, shareRows };
 }
+
+// Builds the Insight tab metrics: capital injected vs market value, growth %,
+// realised/unrealised/total gain, allocation breakdown, and trade activity stats.
+export function buildInsight(transactions, currentPrices = {}) {
+  const { cash, shareRows } = buildSummary(transactions, currentPrices);
+
+  let totalDeposit = 0;
+  let totalWithdrawal = 0;
+  const tradeCounts = { Deposit: 0, Withdrawal: 0, Buy: 0, Sale: 0 };
+
+  for (const t of transactions) {
+    if (tradeCounts[t.item] !== undefined) tradeCounts[t.item] += 1;
+    if (t.item === "Deposit") totalDeposit += Number(t.amount) || 0;
+    if (t.item === "Withdrawal") totalWithdrawal += Number(t.amount) || 0;
+  }
+
+  const netInjection = totalDeposit - totalWithdrawal;
+  const shareMv = shareRows.reduce((s, r) => s + r.mv, 0);
+  const marketValue = cash + shareMv;
+  const growthPct = netInjection !== 0 ? ((marketValue - netInjection) / netInjection) * 100 : 0;
+
+  const realisedGain = shareRows.reduce((s, r) => s + r.realisedGain, 0);
+  const unrealisedGain = shareRows
+    .filter((r) => r.unit > 0.0000001)
+    .reduce((s, r) => s + (r.mv - r.totalPurchasePrice), 0);
+  const totalGain = realisedGain + unrealisedGain;
+
+  const activeRows = shareRows.filter((r) => r.unit > 0.0000001);
+  const allocation = [
+    { label: "Cash", value: cash, pct: marketValue > 0 ? (cash / marketValue) * 100 : 0 },
+    ...activeRows.map((r) => ({
+      label: r.shareCode,
+      value: r.mv,
+      pct: marketValue > 0 ? (r.mv / marketValue) * 100 : 0,
+    })),
+  ].sort((a, b) => b.value - a.value);
+
+  return {
+    totalDeposit,
+    totalWithdrawal,
+    netInjection,
+    marketValue,
+    growthPct,
+    realisedGain,
+    unrealisedGain,
+    totalGain,
+    allocation,
+    tradeCounts,
+    totalTrades: transactions.length,
+  };
+}
