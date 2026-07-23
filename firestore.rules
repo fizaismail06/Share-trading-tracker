@@ -2,11 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // NOTE: this is intentionally open for personal single-user use during
-    // setup. Before sharing the URL or making it public, lock this down
-    // (e.g. Firebase Auth + request.auth.uid checks), same as your other apps.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
   }
 }

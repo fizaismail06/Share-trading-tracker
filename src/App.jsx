@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
-import { db } from "./lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { db, auth } from "./lib/firebase";
 import InputForm from "./components/InputForm";
 import TransactionHistory from "./components/TransactionHistory";
 import Summary from "./components/Summary";
+import Login from "./components/Login";
 
 const TABS = ["Input Form", "Transaction History", "Summary"];
 
@@ -11,15 +13,23 @@ export default function App() {
   const [tab, setTab] = useState("Input Form");
   const [transactions, setTransactions] = useState([]);
   const [currentPrices, setCurrentPrices] = useState({});
+  const [user, setUser] = useState(undefined); // undefined = checking, null = signed out
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "transactions"), (snap) => {
-      setTransactions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
     return unsub;
   }, []);
 
   useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(collection(db, "transactions"), (snap) => {
+      setTransactions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return unsub;
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
     const unsub = onSnapshot(collection(db, "currentPrices"), (snap) => {
       const prices = {};
       snap.docs.forEach((d) => {
@@ -28,13 +38,31 @@ export default function App() {
       setCurrentPrices(prices);
     });
     return unsub;
-  }, []);
+  }, [user]);
+
+  if (user === undefined) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
-        <div className="max-w-3xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-semibold text-slate-800">Share Trading Tracker</h1>
+          <button
+            onClick={() => signOut(auth)}
+            className="text-sm text-slate-500 hover:text-rose-600"
+          >
+            Sign out
+          </button>
         </div>
       </header>
 
