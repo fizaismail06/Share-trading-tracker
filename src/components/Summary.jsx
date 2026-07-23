@@ -7,11 +7,15 @@ const fmt = (n) =>
   Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function Summary({ transactions, currentPrices }) {
-  const { cash, shareRows } = buildSummary(transactions, currentPrices);
+  const { cash, shareRows: allRows } = buildSummary(transactions, currentPrices);
   const [editingCode, setEditingCode] = useState(null);
   const [priceInput, setPriceInput] = useState("");
+  const [showClosed, setShowClosed] = useState(false);
 
-  const totalMv = shareRows.reduce((s, r) => s + r.mv, 0) + cash;
+  const closedCount = allRows.filter((r) => r.unit <= 0.0000001).length;
+  const shareRows = showClosed ? allRows : allRows.filter((r) => r.unit > 0.0000001);
+
+  const totalMv = allRows.reduce((s, r) => s + r.mv, 0) + cash;
 
   const startEdit = (code, current) => {
     setEditingCode(code);
@@ -25,6 +29,29 @@ export default function Summary({ transactions, currentPrices }) {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowClosed(false)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+              !showClosed ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            Active Holdings
+          </button>
+          <button
+            onClick={() => setShowClosed(true)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+              showClosed ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            All (incl. Closed)
+          </button>
+        </div>
+        {!showClosed && closedCount > 0 && (
+          <span className="text-xs text-slate-400">{closedCount} closed position(s) hidden</span>
+        )}
+      </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm text-left">
           <thead>
